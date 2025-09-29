@@ -1,6 +1,3 @@
-console.log("Script cargado correctamente");
-
-
 let current_page = 1;
 const limit = 24;
 let total = 0;
@@ -12,6 +9,12 @@ cancelButton.addEventListener("click", () => {
   dialog.close("closedByUser");
   openCheck(dialog);
 });
+
+const modoOscuroGuardado = localStorage.getItem('modoOscuro');
+if (modoOscuroGuardado === 'true') {
+  document.body.classList.add('dark-mode');
+  document.documentElement.classList.add('dark-mode');
+}
 
 
 function devolverTipo(tipo){
@@ -159,30 +162,69 @@ function openModal(pokemonId, name) {
     })
     .then(data => {
       const modalContent = document.getElementById("modalContent");
+      modalContent.innerHTML = ""; // Limpiar contenido previo
 
-      const tipos = data.types.map(t => {
-        const tipoId = devolverTipo(t.type.name);
-        return `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-vi/omega-ruby-alpha-sapphire/${tipoId}.png" alt="${t.type.name}" style="max-width: 50px;">`;
-      }).join("");
+      const container = document.createElement("div");
+      container.classList.add("modal-container");
 
-      const habilidades = data.abilities.map(a => {
-        return formatearNombre(a.ability.name);
-      }).join(" ");
+      const title = document.createElement("h2");
+      title.classList.add("pokemon-name");
+      title.textContent = name;
+      container.appendChild(title);
 
-      modalContent.innerHTML = `
-        <h2>${name}</h2>
-        <img src="${data.sprites.other['official-artwork'].front_default}" alt="${name}" style="max-width: 150px;">
-        <p>Número: ${pokemonId}</p>
-        <p>Tipos</p>
-        ${tipos}
-        <p>Habilidades</p>
-        <p>${habilidades}</p>
-        <p>Altura: ${data.height / 10} m</p>
-        <p>Peso: ${data.weight / 10} kg</p>
-      `;
+      const img = document.createElement("img");
+      img.src = data.sprites.other['official-artwork'].front_default;
+      img.alt = name;
+      img.style.maxWidth = "150px";
+      img.style.display = "block";
+      img.style.margin = "0 auto";
+      container.appendChild(img);
+
+      const sections = [
+        { label: "Número", content: `#${pokemonId}` },
+        {
+          label: "Tipos",
+          content: data.types.map(t => {
+            const tipoId = devolverTipo(t.type.name);
+            return `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-vi/omega-ruby-alpha-sapphire/${tipoId}.png" alt="${t.type.name}" style="max-width: 50px;">`;
+          }).join(" ")
+        },
+        {
+          label: "Habilidades",
+          content: data.abilities.map(a => formatearNombre(a.ability.name)).join(", ")
+        },
+        {
+        label: "Medidas",
+        content: `
+          <div class="medidas">
+            <span><strong>Altura:</strong> ${data.height / 10} m</span>
+            <span><strong>Peso:</strong> ${data.weight / 10} kg</span>
+          </div>
+        `
+      }
+
+      ];
+
+      sections.forEach(({ label, content }) => {
+        const section = document.createElement("div");
+        section.classList.add("modal-section");
+
+        const heading = document.createElement("h3");
+        heading.textContent = label;
+        section.appendChild(heading);
+
+        const body = document.createElement("div");
+        body.innerHTML = content;
+        section.appendChild(body);
+
+        container.appendChild(section);
+      });
+
+      modalContent.appendChild(container);
       dialog.showModal();
     });
 }
+
 
 function numPages() {
   return Math.ceil(total / limit);
@@ -278,6 +320,13 @@ function buscarPokemon() {
       document.getElementById("pokemonList").innerHTML = `<p style="text-align:center;">${error.message}</p>`;
     });
 }
+
+document.getElementById('toggleDarkMode').addEventListener('click', () => {
+  const isDark = document.body.classList.toggle('dark-mode');
+  document.documentElement.classList.toggle('dark-mode', isDark);
+  localStorage.setItem('modoOscuro', isDark ? 'true' : 'false');
+});
+
 
 fetch('https://pokeapi.co/api/v2/pokemon/?limit=1')
   .then(response => response.json())
