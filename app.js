@@ -7,7 +7,6 @@ const cancelButton = document.getElementById("cancel");
 
 cancelButton.addEventListener("click", () => {
   dialog.close("closedByUser");
-  openCheck(dialog);
 });
 
 const modoOscuroGuardado = localStorage.getItem('modoOscuro');
@@ -333,8 +332,6 @@ document.getElementById("searchInput").addEventListener("keydown", (e) => {
     buscarPokemon();
   }
 });
-
-
 
 fetch('https://pokeapi.co/api/v2/pokemon/?limit=1')
   .then(response => response.json())
