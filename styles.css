@@ -30,7 +30,6 @@ body.dark-mode {
   transform: scale(1.1);
 }
 
-
 [data-pagination],
 [data-pagination] *,
 [data-pagination] *:before,
@@ -154,14 +153,22 @@ article h3 {
 }
 
 
-.topnav {
+.topnav-wrapper {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: #333;
-  padding: 0.5rem 1rem;
-  flex-wrap: wrap; 
+  justify-content: center;
+  padding: 0.5rem;
 }
+
+.topnav {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 
 .active {
   background-color: #04AA6D;
@@ -292,6 +299,39 @@ body.dark-mode .modal-section {
   font-size: 0.95rem;
 }
 
+@media (max-width: 600px) {
+  .topnav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.5rem;
+    padding: 0.5rem;
+  }
+  
+  .search-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+  }
 
+  .search-container input,
+  .search-container button {
+    width: 100%;
+    margin-bottom: 0.5rem;
+  }
+
+  .dropdown-group {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 0.5rem;
+  }
+
+  .dropdown-group select,
+  .dropdown-group button {
+    width: 100%;
+  }
+}
 
 
