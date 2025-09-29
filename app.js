@@ -1,6 +1,10 @@
-var current_page = 1;
-var limit = 24;
-var total = 0;
+console.log("Script cargado correctamente");
+
+
+let current_page = 1;
+const limit = 24;
+let total = 0;
+
 const dialog = document.getElementById("favDialog");
 const cancelButton = document.getElementById("cancel");
 
@@ -36,91 +40,115 @@ function devolverTipo(tipo){
 
 }
 
-function agregarReciente(id, name) {
-  let recientes = JSON.parse(localStorage.getItem("recientes")) || [];
-
-  recientes = recientes.filter(p => String(p.id) !== String(id));
-
-  recientes.unshift({ id: String(id), name });
-
-  if (recientes.length > 10) {
-    recientes = recientes.slice(0, 10);
-  }
-
-  localStorage.setItem("recientes", JSON.stringify(recientes));
-  actualizarRecientesDropdown();
+function formatearNombre(nombre) {
+  return String(nombre).charAt(0).toUpperCase() + String(nombre).slice(1).replaceAll("-", " ");
 }
 
-
-fetch('https://pokeapi.co/api/v2/pokemon/?limit=1')
-  .then(response => response.json())
-  .then(data => {
-    total = data.count;
-    changePage(1);
-    actualizarFavoritosDropdown();
-    actualizarRecientesDropdown(); 
-  });
-
-
-function numPages() {
-  return Math.ceil(total / limit);
-}
-
-function changePage(page) {
-  if (page < 1) page = 1;
-  if (page > numPages()) page = numPages();
-  current_page = page;
-  const offset = (page - 1) * limit;
-
-  fetch(`https://pokeapi.co/api/v2/pokemon?offset=${offset}&limit=${limit}`)
-    .then(response => response.json())
-    .then(listaPokemon => {
-      document.getElementById("pokemonList").innerHTML = "";
-
-      listaPokemon.results.forEach(pokemon => {
+function crearTarjetaPokemon(id, nombre, imgSrc) {
   const art = document.createElement("article");
   art.classList.add("pokemon-card");
 
-  const token = pokemon.url.split("/");
-  const id = token[token.length - 2];
-
   const img = document.createElement("img");
-  img.src = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+  img.src = imgSrc;
 
   const nameContainer = document.createElement("div");
   nameContainer.classList.add("name-star");
 
   const name = document.createElement("span");
-  let nombre = String(pokemon.name).charAt(0).toUpperCase() + String(pokemon.name).slice(1);
-  name.textContent = nombre.replaceAll("-", " ");
+  name.textContent = nombre;
 
   const star = document.createElement("span");
   star.innerHTML = isFavorito(id) ? "★" : "☆";
   star.classList.add("favorite-star");
   star.style.cursor = "pointer";
   star.onclick = (e) => {
-    e.stopPropagation(); 
+    e.stopPropagation();
     toggleFavorite(id, nombre);
     star.innerHTML = isFavorito(id) ? "★" : "☆";
   };
 
   nameContainer.appendChild(name);
   nameContainer.appendChild(star);
-
   art.appendChild(img);
   art.appendChild(nameContainer);
 
-  
   art.addEventListener("click", () => {
     openModal(id, nombre);
   });
 
-  document.getElementById("pokemonList").appendChild(art);
-});
+  return art;
+}
 
-    });
+function actualizarDropdown(id, label, items, onSelect) {
+  const dropdown = document.getElementById(id);
+  dropdown.innerHTML = '';
 
-  renderPagination();
+  const placeholder = document.createElement("option");
+  placeholder.textContent = label;
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  dropdown.appendChild(placeholder);
+
+  items.forEach(p => {
+    if (!p.id || !p.name) return;
+    const option = document.createElement("option");
+    option.textContent = p.name;
+    option.value = p.id;
+    dropdown.appendChild(option);
+  });
+
+  dropdown.onchange = () => {
+    const selectedId = dropdown.value;
+    const selectedName = items.find(p => String(p.id) === selectedId)?.name;
+    if (selectedId && selectedName) {
+      onSelect(selectedId, selectedName);
+    }
+    dropdown.selectedIndex = 0;
+  };
+}
+
+function toggleFavorite(id, name) {
+  let favoritos = JSON.parse(localStorage.getItem("favoritos")) || [];
+  const exists = favoritos.find(p => p.id === id);
+
+  if (exists) {
+    favoritos = favoritos.filter(p => p.id !== id);
+  } else {
+    if (favoritos.length >= 50) {
+      alert("Ya alcanzaste el límite de favoritos. Quitá alguno para seguir agregando.");
+      return;
+    }
+    favoritos.push({ id, name });
+  }
+
+  localStorage.setItem("favoritos", JSON.stringify(favoritos));
+  actualizarFavoritosDropdown();
+}
+
+function isFavorito(id) {
+  const favoritos = JSON.parse(localStorage.getItem("favoritos")) || [];
+  return favoritos.some(p => p.id === id);
+}
+
+function actualizarFavoritosDropdown() {
+  const favoritos = JSON.parse(localStorage.getItem("favoritos")) || [];
+  actualizarDropdown("favoritosDropdown", "Favoritos", favoritos, openModal);
+}
+
+function agregarReciente(id, name) {
+  let recientes = JSON.parse(localStorage.getItem("recientes")) || [];
+  recientes = recientes.filter(p => String(p.id) !== String(id));
+  recientes.unshift({ id: String(id), name });
+  if (recientes.length > 10) {
+    recientes = recientes.slice(0, 10);
+  }
+  localStorage.setItem("recientes", JSON.stringify(recientes));
+  actualizarRecientesDropdown();
+}
+
+function actualizarRecientesDropdown() {
+  const recientes = JSON.parse(localStorage.getItem("recientes")) || [];
+  actualizarDropdown("recientesDropdown", "Recientes", recientes, openModal);
 }
 
 function openModal(pokemonId, name) {
@@ -133,13 +161,12 @@ function openModal(pokemonId, name) {
       const modalContent = document.getElementById("modalContent");
 
       const tipos = data.types.map(t => {
-        const tipo = t.type.name;
-        const tipoId = devolverTipo(tipo);
-        return `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-vi/omega-ruby-alpha-sapphire/${tipoId}.png" alt="${tipo}" style="max-width: 50px;">`;
+        const tipoId = devolverTipo(t.type.name);
+        return `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-vi/omega-ruby-alpha-sapphire/${tipoId}.png" alt="${t.type.name}" style="max-width: 50px;">`;
       }).join("");
 
       const habilidades = data.abilities.map(a => {
-        return a.ability.name.charAt(0).toUpperCase() + a.ability.name.slice(1);
+        return formatearNombre(a.ability.name);
       }).join(" ");
 
       modalContent.innerHTML = `
@@ -157,8 +184,9 @@ function openModal(pokemonId, name) {
     });
 }
 
-
-
+function numPages() {
+  return Math.ceil(total / limit);
+}
 
 function renderPagination() {
   const pagination = document.getElementById("pagination");
@@ -183,9 +211,7 @@ function renderPagination() {
   createPageItem(1);
 
   if (current_page > buffer + 2) {
-    const li = document.createElement("li");
-    li.innerText = "...";
-    pagination.appendChild(li);
+    pagination.appendChild(document.createElement("li")).innerText = "...";
   }
 
   for (let i = current_page - buffer; i <= current_page + buffer; i++) {
@@ -195,9 +221,7 @@ function renderPagination() {
   }
 
   if (current_page < totalPages - buffer - 1) {
-    const li = document.createElement("li");
-    li.innerText = "...";
-    pagination.appendChild(li);
+    pagination.appendChild(document.createElement("li")).innerText = "...";
   }
 
   if (totalPages > 1) {
@@ -205,82 +229,29 @@ function renderPagination() {
   }
 }
 
-function toggleFavorite(id, name) {
-  let favoritos = JSON.parse(localStorage.getItem("favoritos")) || [];
-  const exists = favoritos.find(p => p.id === id);
+function changePage(page) {
+  if (page < 1) page = 1;
+  if (page > numPages()) page = numPages();
+  current_page = page;
+  const offset = (page - 1) * limit;
 
-  if (exists) {
-    favoritos = favoritos.filter(p => p.id !== id);
-  } else {
-    favoritos.push({ id, name });
-  }
+  fetch(`https://pokeapi.co/api/v2/pokemon?offset=${offset}&limit=${limit}`)
+    .then(response => response.json())
+    .then(listaPokemon => {
+      document.getElementById("pokemonList").innerHTML = "";
 
-  localStorage.setItem("favoritos", JSON.stringify(favoritos));
-  actualizarFavoritosDropdown();
+      listaPokemon.results.forEach(pokemon => {
+        const token = pokemon.url.split("/");
+        const id = token[token.length - 2];
+        const nombre = formatearNombre(pokemon.name);
+        const imgSrc = `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+        const art = crearTarjetaPokemon(id, nombre, imgSrc);
+        document.getElementById("pokemonList").appendChild(art);
+      });
+    });
+
+  renderPagination();
 }
-
-function isFavorito(id) {
-  const favoritos = JSON.parse(localStorage.getItem("favoritos")) || [];
-  return favoritos.some(p => p.id === id);
-}
-
-function actualizarFavoritosDropdown() {
-  const dropdown = document.getElementById("favoritosDropdown");
-  dropdown.innerHTML = '';
-
-  const placeholder = document.createElement("option");
-  placeholder.textContent = "Favoritos";
-  placeholder.disabled = true;
-  placeholder.selected = true;
-  dropdown.appendChild(placeholder);
-
-  const favoritos = JSON.parse(localStorage.getItem("favoritos")) || [];
-  favoritos.forEach(p => {
-    const option = document.createElement("option");
-    option.textContent = p.name;
-    option.value = p.id;
-    dropdown.appendChild(option);
-  });
-
-  dropdown.onchange = () => {
-    const selectedId = dropdown.value;
-    const selectedName = favoritos.find(p => p.id === selectedId)?.name;
-    if (selectedId && selectedName) {
-      openModal(selectedId, selectedName);
-    }
-    dropdown.selectedIndex = 0; 
-  };
-}
-
-function actualizarRecientesDropdown() {
-  const dropdown = document.getElementById("recientesDropdown");
-  dropdown.innerHTML = '';
-
-  const placeholder = document.createElement("option");
-  placeholder.textContent = "Recientes";
-  placeholder.disabled = true;
-  placeholder.selected = true;
-  dropdown.appendChild(placeholder);
-
-  const recientes = JSON.parse(localStorage.getItem("recientes")) || [];
-  recientes.forEach(p => {
-    if (!p.id || !p.name) return;
-    const option = document.createElement("option");
-    option.textContent = p.name;
-    option.value = p.id;
-    dropdown.appendChild(option);
-  });
-
-  dropdown.onchange = () => {
-    const selectedId = dropdown.value;
-    const selectedName = recientes.find(p => String(p.id) === selectedId)?.name;
-    if (selectedId && selectedName) {
-      openModal(selectedId, selectedName);
-    }
-    dropdown.selectedIndex = 0;
-  };
-}
-
 
 function buscarPokemon() {
   const query = document.getElementById("searchInput").value.trim().toLowerCase();
@@ -294,44 +265,13 @@ function buscarPokemon() {
     .then(pokemon => {
       document.getElementById("pokemonList").innerHTML = "";
 
-      const art = document.createElement("article");
-      art.classList.add("pokemon-card");
-
       const id = pokemon.id;
-      const nombre = String(pokemon.name).charAt(0).toUpperCase() + String(pokemon.name).slice(1).replaceAll("-", " ");
+      const nombre = formatearNombre(pokemon.name);
+      const imgSrc = pokemon.sprites.other["official-artwork"].front_default;
 
-      // ✅ Agregar a Recientes
       agregarReciente(id, nombre);
 
-      const img = document.createElement("img");
-      img.src = pokemon.sprites.other["official-artwork"].front_default;
-
-      const nameContainer = document.createElement("div");
-      nameContainer.classList.add("name-star");
-
-      const name = document.createElement("span");
-      name.textContent = nombre;
-
-      const star = document.createElement("span");
-      star.innerHTML = isFavorito(id) ? "★" : "☆";
-      star.classList.add("favorite-star");
-      star.style.cursor = "pointer";
-      star.onclick = (e) => {
-        e.stopPropagation();
-        toggleFavorite(id, nombre);
-        star.innerHTML = isFavorito(id) ? "★" : "☆";
-      };
-
-      nameContainer.appendChild(name);
-      nameContainer.appendChild(star);
-
-      art.appendChild(img);
-      art.appendChild(nameContainer);
-
-      art.addEventListener("click", () => {
-        openModal(id, nombre);
-      });
-
+      const art = crearTarjetaPokemon(id, nombre, imgSrc);
       document.getElementById("pokemonList").appendChild(art);
     })
     .catch(error => {
@@ -339,3 +279,11 @@ function buscarPokemon() {
     });
 }
 
+fetch('https://pokeapi.co/api/v2/pokemon/?limit=1')
+  .then(response => response.json())
+  .then(data => {
+    total = data.count;
+    changePage(1);
+    actualizarFavoritosDropdown();
+    actualizarRecientesDropdown(); 
+  });
