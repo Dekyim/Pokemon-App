@@ -327,6 +327,14 @@ document.getElementById('toggleDarkMode').addEventListener('click', () => {
   localStorage.setItem('modoOscuro', isDark ? 'true' : 'false');
 });
 
+document.getElementById("searchInput").addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    buscarPokemon();
+  }
+});
+
+
 
 fetch('https://pokeapi.co/api/v2/pokemon/?limit=1')
   .then(response => response.json())
